@@ -1,0 +1,48 @@
+! Paste into the 2960 switch CLI (Packet Tracer)
+enable
+configure terminal
+hostname SW-BANK
+!
+vlan 10
+ name TELLER
+vlan 20
+ name MANAGER
+vlan 30
+ name IT_STAFF
+vlan 40
+ name SERVERS
+vlan 99
+ name NATIVE_UNUSED
+exit
+!
+interface range fa0/1 - 5
+ switchport mode access
+ switchport access vlan 10
+ spanning-tree portfast
+interface range fa0/6 - 10
+ switchport mode access
+ switchport access vlan 20
+ spanning-tree portfast
+interface range fa0/11 - 15
+ switchport mode access
+ switchport access vlan 30
+ spanning-tree portfast
+interface range fa0/16 - 20
+ switchport mode access
+ switchport access vlan 40
+ spanning-tree portfast
+!
+interface gigabitEthernet 0/1
+ switchport mode trunk
+ switchport trunk native vlan 99
+ switchport trunk allowed vlan 10,20,30,40
+ no shutdown
+!
+interface range fa0/21 - 24
+ shutdown
+interface gigabitEthernet 0/2
+ shutdown
+interface vlan 1
+ shutdown
+end
+copy running-config startup-config

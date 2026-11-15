@@ -1,0 +1,104 @@
+! Paste into the 2911 router CLI (Packet Tracer)
+! The admin secret below is the MD5 hash of the password 123.
+enable
+configure terminal
+hostname R-Bank
+ip domain-name bank.com
+username admin privilege 15 secret 5 $1$mERr$3HhIgMGBA/9qNmgzccuxv0
+!
+interface gigabitEthernet 0/0
+ description Trunk-To-SW-Bank
+ no ip address
+ no shutdown
+interface gigabitEthernet 0/0.10
+ description Vlan10-Teller
+ encapsulation dot1Q 10
+ ip address 192.168.10.1 255.255.255.0
+interface gigabitEthernet 0/0.20
+ description VLAN20-MANAGER
+ encapsulation dot1Q 20
+ ip address 192.168.20.1 255.255.255.0
+interface gigabitEthernet 0/0.30
+ description Vlan30-IT_Staff
+ encapsulation dot1Q 30
+ ip address 192.168.30.1 255.255.255.0
+interface gigabitEthernet 0/0.40
+ description VLAN40-SERVERS
+ encapsulation dot1Q 40
+ ip address 192.168.40.1 255.255.255.0
+interface range gigabitEthernet 0/1 - 2
+ shutdown
+interface vlan 1
+ shutdown
+exit
+!
+crypto key generate rsa modulus 1024
+!
+ip access-list extended TELLER_ACL
+ remark ===== DNS =====
+ permit icmp 192.168.10.0 0.0.0.255 host 192.168.10.1
+ permit udp 192.168.10.0 0.0.0.255 host 192.168.40.10 eq domain
+ permit tcp 192.168.10.0 0.0.0.255 host 192.168.40.10 eq domain
+ remark ===== WEB =====
+ permit tcp 192.168.10.0 0.0.0.255 host 192.168.40.10 eq www
+ permit tcp 192.168.10.0 0.0.0.255 host 192.168.40.10 eq 443
+ remark ===== MAIL =====
+ permit tcp 192.168.10.0 0.0.0.255 host 192.168.40.20 eq smtp
+ permit tcp 192.168.10.0 0.0.0.255 host 192.168.40.20 eq pop3
+ remark ===== BLOCK MANAGEMENT ======
+ deny tcp 192.168.10.0 0.0.0.255 any eq ftp
+ deny tcp 192.168.10.0 0.0.0.255 any eq 22
+ deny tcp 192.168.10.0 0.0.0.255 any eq telnet
+ remark ===== FINAL =====
+ deny ip any any
+ip access-list extended MANAGER_ACL
+ remark ===== DNS =====
+ permit icmp 192.168.20.0 0.0.0.255 host 192.168.20.1
+ permit udp 192.168.20.0 0.0.0.255 host 192.168.40.10 eq domain
+ permit tcp 192.168.20.0 0.0.0.255 host 192.168.40.10 eq domain
+ remark ===== WEB =====
+ permit tcp 192.168.20.0 0.0.0.255 host 192.168.40.10 eq www
+ permit tcp 192.168.20.0 0.0.0.255 host 192.168.40.10 eq 443
+ remark ===== MAIL =====
+ permit tcp 192.168.20.0 0.0.0.255 host 192.168.40.20 eq smtp
+ permit tcp 192.168.20.0 0.0.0.255 host 192.168.40.20 eq pop3
+ remark ===== BLOCK FTP =====
+ deny tcp 192.168.20.0 0.0.0.255 any eq ftp
+ remark ===== BLOCK MANAGEMENT =====
+ deny tcp 192.168.20.0 0.0.0.255 any eq 22
+ deny tcp 192.168.20.0 0.0.0.255 any eq telnet
+ remark ===== FINAL =====
+ deny ip any any
+ip access-list extended IT_ACL
+ remark ===== DNS =====
+ permit udp 192.168.30.0 0.0.0.255 host 192.168.40.10 eq domain
+ permit tcp 192.168.30.0 0.0.0.255 host 192.168.40.10 eq domain
+ remark ===== WEB =====
+ permit tcp 192.168.30.0 0.0.0.255 host 192.168.40.10 eq www
+ permit tcp 192.168.30.0 0.0.0.255 host 192.168.40.10 eq 443
+ remark ===== MAIL =====
+ permit tcp 192.168.30.0 0.0.0.255 host 192.168.40.20 eq smtp
+ permit tcp 192.168.30.0 0.0.0.255 host 192.168.40.20 eq pop3
+ remark ===== FTP =====
+ permit tcp 192.168.30.0 0.0.0.255 host 192.168.40.30 eq ftp
+ permit tcp 192.168.30.0 0.0.0.255 host 192.168.40.30 eq 20
+ remark ===== MANAGEMENT =====
+ permit tcp 192.168.30.0 0.0.0.255 any eq 22
+ permit tcp 192.168.30.0 0.0.0.255 any eq telnet
+ remark ===== ICMP =====
+ permit icmp 192.168.30.0 0.0.0.255 any
+ remark ===== FINAL =====
+ deny ip any any
+!
+interface gigabitEthernet 0/0.10
+ ip access-group TELLER_ACL in
+interface gigabitEthernet 0/0.20
+ ip access-group MANAGER_ACL in
+interface gigabitEthernet 0/0.30
+ ip access-group IT_ACL in
+exit
+line vty 0 4
+ login local
+ transport input ssh
+end
+copy running-config startup-config
